@@ -1,0 +1,398 @@
+name: Create pull request
+
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        required: false
+        type: string
+        default: 'ubuntu-latest'
+
+      target-branch:
+        description: 'Branch de destino do PR.'
+        required: true
+        type: string
+      origin-branch:
+        description: 'Branch origem do PR. Caso campo esteja vazio sera utilizada a branch atual do workflow.'
+        required: false
+        type: string
+      target-create-branch:
+        description: 'Caso target-branch não exista sera criada.'
+        required: false
+        type: boolean
+        default: false
+      target-base-branch:
+        description: 'Branch base para criacao de target-branch. target-create-branch deve ser true'
+        required: false
+        type: string
+      custom-title:
+        required: false
+        default: 'PR criado automaticamente.'
+        type: string
+      id-taac:
+        required: false
+        type: string
+        default: ''
+      ambiente:
+        required: false
+        type: string
+        default: 'distribuida'
+      custom-body:
+        required: false
+        type: string
+
+      prefix-refs-tag:
+        description: 'Para Pull requests abertos '
+        required: false
+        default: 'release/'
+        type: string
+      environment:
+        required: false
+        type: string
+      is-pre-prod:
+        required: false
+        type: boolean
+        default: false
+      enable-github-app:
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      APPLICATION_ID:
+        required: false
+      APP_PRIVATE_KEY:
+        required: false
+      APPLICATION_ID_BH_1:
+        required: false
+      APP_PRIVATE_KEY_BH_1:
+        required: false
+      APPLICATION_ID_BH_2:
+        required: false
+      APP_PRIVATE_KEY_BH_2:
+        required: false
+      APPLICATION_ID_BH_3:
+        required: false
+      APP_PRIVATE_KEY_BH_3:
+        required: false
+      DG:
+        required: false
+    outputs:
+      pr-number:
+        description: "PR Number created"
+        value: ${{ jobs.pull-request.outputs.pr-number }}
+      pr-url:
+        description: "URL for PR created"
+        value: ${{ jobs.pull-request.outputs.pr-url }}
+
+jobs:
+  pull-request:
+    environment: ${{ inputs.environment }}
+    name: Create
+    runs-on: ${{ inputs.runs-on }}
+    outputs:
+      pr-number: ${{ steps.auto-pull-request.outputs.pr-number }}
+      pr-url: ${{ steps.auto-pull-request.outputs.pr-url }}
+    steps:
+      - name: Get Branch Name
+        run: |
+          if [[ "${{ inputs.origin-branch }}" == "" ]]; then
+            if [[ "${{ github.ref_type }}" == "branch" ]]; then
+              echo "branch_name=${{ github.ref_name }}" >> $GITHUB_ENV
+            else
+              echo "branch_name=${{ inputs.prefix-refs-tag }}${{ github.ref_name }}" >> $GITHUB_ENV
+            fi
+          else
+            echo "branch_name=${{ inputs.origin-branch }}" >> $GITHUB_ENV
+            echo ${{ inputs.origin-branch }}
+          fi
+          source $GITHUB_ENV
+          echo "Use $branch_name branch"
+
+      - name: Check open PRs
+        id: check-open-prs
+        uses: actions/github-script@v6
+        with:
+          script: |
+            let useApp = false;
+            const response = await github.rest.pulls.list({
+                            owner: context.repo.owner,
+                            repo: context.repo.repo,
+                            head: "itau-corp:${{ env.branch_name }}",
+                            base: "${{ inputs.target-branch }}",
+                            state: "open"
+                            });
+
+            if (response.data.length > 0 && !${{ inputs.is-pre-prod }}){
+              console.log("Já existe PR aberto para essas branchs.")
+            }else{
+              useApp = true;
+              console.log("Não existe PR aberto para essas branches.");
+            }
+            core.setOutput("use-app",useApp)
+
+
+      - name: Evaluate secrets
+        id: evaluate_secrets
+        run: |
+          if [[ '${{ inputs.enable-github-app }}' != 'true' ]] && [[ '${{ steps.check-open-prs.outputs.use-app }}' != 'true' ]]; then
+            echo "token=null" >> $GITHUB_OUTPUT
+          elif [[ '${{ secrets.APP_PRIVATE_KEY_BH_1 }}' != '' || '${{ secrets.APP_PRIVATE_KEY_BH_2 }}' != '' || '${{ secrets.APP_PRIVATE_KEY_BH_3 }}' != '' ]]; then
+            RESULT=$(( ($GITHUB_RUN_NUMBER % 3) ))
+            echo $RESULT
+            if [[ $RESULT -eq 0 && '${{ vars.APPLICATION_ID_BH_1 }}' != '' ]]; then
+              echo "Exportando APPLICATION_ID_BH_1"
+              echo "APPLICATION_ID_BH=${{ vars.APPLICATION_ID_BH_1 }}" >> $GITHUB_OUTPUT
+              echo "Exportando APP_PRIVATE_KEY_BH_1"
+              echo "APP_PRIVATE_KEY_BH<<EOF" >> $GITHUB_OUTPUT
+              echo "${{ secrets.APP_PRIVATE_KEY_BH_1 }}" >> $GITHUB_OUTPUT
+              echo "EOF" >> $GITHUB_OUTPUT
+            elif [[ $RESULT -eq 1 && '${{ vars.APPLICATION_ID_BH_2 }}' != '' ]]; then
+              echo "Exportando APPLICATION_ID_BH_2"
+              echo "APPLICATION_ID_BH=${{ vars.APPLICATION_ID_BH_2 }}" >> $GITHUB_OUTPUT
+              echo "Exportando APP_PRIVATE_KEY_BH_2"
+              echo "APP_PRIVATE_KEY_BH<<EOF" >> $GITHUB_OUTPUT
+              echo "${{ secrets.APP_PRIVATE_KEY_BH_2 }}" >> $GITHUB_OUTPUT
+              echo "EOF" >> $GITHUB_OUTPUT
+            elif [[ $RESULT -eq 2 && '${{ vars.APPLICATION_ID_BH_3 }}' != '' ]]; then
+              echo "Exportando APPLICATION_ID_BH_3"
+              echo "APPLICATION_ID_BH=${{ vars.APPLICATION_ID_BH_3 }}" >> $GITHUB_OUTPUT
+              echo "Exportando APP_PRIVATE_KEY_BH_3"
+              echo "APP_PRIVATE_KEY_BH<<EOF" >> $GITHUB_OUTPUT
+              echo "${{ secrets.APP_PRIVATE_KEY_BH_3 }}" >> $GITHUB_OUTPUT
+              echo "EOF" >> $GITHUB_OUTPUT
+            else
+              echo "Erro ao realizar a rotacao do token"
+              exit 1
+            fi
+            echo "token=BH" >> $GITHUB_OUTPUT
+          else
+            echo "APPLICATION_ID_BH=${{ secrets.APPLICATION_ID }}" >> $GITHUB_OUTPUT
+            echo "APP_PRIVATE_KEY_BH=${{ secrets.APP_PRIVATE_KEY }}" >> $GITHUB_OUTPUT
+            echo "token=BH" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get Token
+        id: get_workflow_token
+        if: steps.evaluate_secrets.outputs.token == 'BH'
+        uses: peter-murray/workflow-application-token-action@v2
+        with:
+          application_id: ${{ steps.evaluate_secrets.outputs.APPLICATION_ID_BH }}
+          application_private_key: ${{ steps.evaluate_secrets.outputs.APP_PRIVATE_KEY_BH }}
+
+      - name: auto pull-request
+        id: auto-pull-request
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ steps.get_workflow_token.outputs.token || github.token }}
+          script: |
+            const listLabel = [
+              {
+                name: 'rollback',
+                color: 'D93F0B',
+                description: 'Utilizada somente para rollback. Criada automaticamente.'
+              },
+              {
+                name: 'cancel-deployment',
+                color: '5319E7',
+                description: 'Utilizada somente para Cancelamento de Deployments em andamento. Criada automaticamente.'
+              },
+              {
+                name: 'promote',
+                color: '006B75',
+                description: 'Utilizada somente para Promoção ou Rejeição de Deployments. Criada automaticamente.'
+              },
+              {
+                name: 'rollback-piloto',
+                color: 'E16605',
+                description: 'Utilizada somente para rollback de piloto. Criada automaticamente.'
+              }
+            ]
+            let prMessage = ''
+            let isDep = context.repo.repo.split('-')[2] == 'dep'
+
+            const inputs = ${{ toJSON(inputs) }}
+            core.info('Adding custom-body')
+            core.info(inputs["custom-body"])
+
+
+            if (inputs["custom-body"].length > 0) {
+              core.info('Adding custom-body')
+              prMessage = inputs["custom-body"]
+            } else
+            if ('${{ inputs.target-branch }}' == 'main' && !isDep) {
+              core.info('Open PR com mensagem de GMUD.')
+              let numeroRetorno = ''
+              let tagRollback = 'Not found'
+              try {
+                core.debug('Response responseRelease:')
+                let responseRelease = await github.rest.repos.listReleases({
+                                        owner: context.repo.owner,
+                                        repo: context.repo.repo,
+                                        per_page: 100,
+                                      });
+                core.debug(responseRelease)
+                core.debug('Response responseRelease:')
+                let responseTag = await github.rest.repos.listTags({
+                                        owner: context.repo.owner,
+                                        repo: context.repo.repo,
+                                        per_page: 100,
+                                      });
+                core.debug(responseTag)
+                responseRelease = responseRelease.data.filter((x) => x.draft == false && x.prerelease == false)[0]
+                numeroRetorno = responseTag.data.filter((x) => x.name == responseRelease.tag_name)[0].commit.sha
+                tagRollback = responseRelease.tag_name
+              } catch (error) {
+                core.warning('Versao de Rollback não encontrada')
+                numeroRetorno = 'Not found'
+              }
+
+              let idTaac = ''
+              if ('${{ inputs.id-taac }}' == '') {
+                idTaac = 'Not found'
+              } else {
+                idTaac = JSON.parse(JSON.stringify(${{ inputs.id-taac }})).id_taac
+              }
+
+              if ( idTaac == '' ) {
+                core.info('Mensagem com GMUD manual')
+                prMessage = `GMUD: CHGXXXXXXX <breakLine>
+                             Hora implantação: HH:MM <breakLine>
+                             Data implantação: DD/MM/YYYY <breakLine>
+                             Pacote de implantação: '${{ github.sha }}' <breakLine>
+                             Pacote de retorno: '${numeroRetorno}' <breakLine>
+                             Versão rollback: ${tagRollback} <breakLine>
+                             <breakLine>
+                             **_INSTRUÇÕES_**: <breakLine>
+                             1. Se existe o fluxo de bypass de GMUD para sua sigla, faça a edição do PR para iniciar o fluxo de produção. Não é necessário preencher as informações da mudança.<breakLine>
+                             2. Troque o valor CHGXXXXXXX pelo número da sua GMUD ou INC. <breakLine>
+                             3. Preencha os campos Hora implantação e Data implantação para agendar a entrega. Lembrando que a GMUD deve estar no status de Implementar na data/hora informada. <breakLine>
+                             4. Copie o número do pacote de implatacao e retorno na sua GMUD, pois esse valor será validado pela esteira. <breakLine>
+                             5. **Caso deseja cancelar seu agendamento, substitua o valor da GMUD por "Cancelado".** <breakLine>
+                             <breakLine>
+                             **_IMPORTANTE_**: <breakLine>
+                             - O número do pacote de retorno está atrelado diretamente a versão de rollback. <breakLine>`
+              } else  {
+                core.info('Mensagem com GMUD automatizada')
+                if (${{ inputs.is-pre-prod }})
+                  prMessage = `Hora implantação: HH:MM <breakLine>
+                             Data implantação: DD/MM/YYYY <breakLine>`
+
+                prMessage += `Pacote de implantação: '${{ github.sha }}' <breakLine>
+                             Pacote de retorno: '${numeroRetorno}' <breakLine>
+                             Versão rollback: ${tagRollback} <breakLine>
+                             ID TAAC: {'${idTaac}'} <breakLine>
+                             Histórias: [XPTO-1,XPTO-2] <breakLine>
+                             <breakLine>`
+
+                if (${{ inputs.is-pre-prod }})
+                  prMessage += `**_INSTRUÇÕES_**: <breakLine>
+                             1. Este fluxo é seguido para entregas em ambientes utilizando cloud publica, com entrega em ambiente de **_PILOTO_** e **_PRODUÇÃO_**.<breakLine>
+                             2. Preencha o campo Histórias dentro dos colchetes com uma separação de vírgulas para que o momento da abertura da GMUD faça o link com as mesmas. <breakLine>
+                             3. Copie o número do pacote de implatacao e retorno na sua GMUD, pois esse valor será validado pela esteira. <breakLine>
+                             4. O agendamento de PILOTO será o valor informado no campo **Data de início planejada** na sua GMUD. <breakLine>
+                             5. O agendamento de PRODUÇÃO será o valor informado nos campos **Hora implantação** e **Data implantação** no corpo do Pull Request. <breakLine>
+                             6. Após implantação com sucesso em **PILOTO**, o número da GMUD será inserido no corpo deste Pull Request. <breakLine>
+                             7. **Caso deseja reagendar sua entrega em **PRODUÇÃO**, altere os campos **Hora implantação** e **Data implantação** no corpo do Pull Request. <breakLine>
+                             8. **Caso deseja cancelar seu agendamento em **PRODUÇÃO**, substitua o valor da GMUD por "Cancelado".** <breakLine>
+
+                             <breakLine>
+                             **_IMPORTANTE_**: <breakLine>
+                             - O número do pacote de retorno está atrelado diretamente a versão de rollback. <breakLine>`
+
+                else
+                  prMessage += `**_INSTRUÇÕES_**: <breakLine>
+                             1. Este fluxo é seguido para entregas em ambientes utilizando cloud publica.<breakLine>
+                             2. Preencha o campo Histórias dentro dos colchetes com uma separação de vírgulas para que o momento da abertura da GMUD faça o link com as mesmas. <breakLine>
+                             3. Copie o número do pacote de implatacao e retorno na sua GMUD, pois esse valor será validado pela esteira. <breakLine>
+
+                             <breakLine>
+                             **_IMPORTANTE_**: <breakLine>
+                             - O número do pacote de retorno está atrelado diretamente a versão de rollback. <breakLine>`
+              }
+            }
+
+            for (const label of listLabel) {
+              try {
+                core.debug('Response createLabel:');
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                const response = await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: label.name,
+                  color: label.color,
+                  description: label.description
+                });
+                core.debug(response);
+                core.debug('Label created!');
+              } catch (error) {
+                core.debug(error.message);
+              }
+            }
+
+            prMessage = prMessage.replace(/\n/g, '').replace(/\t/g, '').replace(/\ \ /g, '').replace(/<breakLine>/g, "\n")
+            if (${{ inputs.target-create-branch }} == true) {
+              if ("${{ inputs.target-base-branch }}" == "") throw new Error('When target-create-branch is true you should input target-base-branch')
+              core.debug('Response of getBranch:')
+              let response = await github.rest.repos.getBranch({
+                                owner: context.repo.owner,
+                                repo: context.repo.repo,
+                                branch: "${{ inputs.target-base-branch }}"
+                              })
+              core.debug(response)
+              try {
+                core.debug('Response of createRef:')
+                response = await github.rest.git.createRef({
+                              owner: context.repo.owner,
+                              repo: context.repo.repo,
+                              ref: "refs/heads/${{ inputs.target-branch }}",
+                              sha: response.data.commit.sha
+                            })
+                core.info('Branch ${{ inputs.target-branch }} created!')
+                core.debug(JSON.parse(JSON.stringify(response)))
+              } catch (error) {
+                core.debug(error.message)
+                core.info('Branch ${{ inputs.target-branch }} already exists!')
+              }
+            }
+            try {
+              core.debug('Response of pulls.create:')
+              response = await github.rest.pulls.create({
+                            owner: context.repo.owner,
+                            repo: context.repo.repo,
+                            head: "${{ env.branch_name }}",
+                            base: "${{ inputs.target-branch }}",
+                            title: "${{ inputs.custom-title }} ${{ inputs.target-branch  }} <- ${{ env.branch_name }}",
+                            body: prMessage
+                          });
+              core.info('Pull request created!')
+              core.info(`Link: ${response.data.html_url}`)
+              core.setOutput('pr-url', `${response.data.html_url}`);
+              core.setOutput('pr-number', `${response.data.number}`);
+              core.debug(JSON.parse(JSON.stringify(response)))
+            } catch (error) {
+              core.debug(error.message)
+              let responseError = JSON.parse(error.message.split('Validation Failed: ')[1])
+              core.debug(responseError)
+              if (responseError.code == "invalid") throw new Error('Error to create pull request. Check if ${{ inputs.target-branch  }} and ${{ env.branch_name }} branchs exist.')
+              core.info(responseError.message)
+              if (responseError.message.includes('A pull request already exists')) {
+                core.debug('Response list pull request:')
+                response = await github.rest.pulls.list({
+                            owner: context.repo.owner,
+                            repo: context.repo.repo
+                          });
+                core.debug(response)
+                const pullRequestInfo = response.data.filter((x) => x.head.ref == "${{ env.branch_name }}" && x.base.ref == "${{ inputs.target-branch }}")
+                core.debug('Result filter list:')
+                core.debug(pullRequestInfo)
+                core.debug('Response update pull request:')
+                response = await github.rest.pulls.update({
+                            owner: context.repo.owner,
+                            repo: context.repo.repo,
+                            pull_number: pullRequestInfo[0].number,
+                            body: prMessage
+                          });
+                core.debug(response)
+              }
+            }
+
