@@ -130,60 +130,60 @@ jobs:
             }
             core.setOutput("use-app",useApp)
 
+      # - name: Evaluate secrets
+      #   id: evaluate_secrets
+      #   run: |
+      #     if [[ '${{ inputs.enable-github-app }}' != 'true' ]] && [[ '${{ steps.check-open-prs.outputs.use-app }}' != 'true' ]]; then
+      #       echo "token=null" >> $GITHUB_OUTPUT
+      #     elif [[ '${{ secrets.APP_PRIVATE_KEY_BH_1 }}' != '' || '${{ secrets.APP_PRIVATE_KEY_BH_2 }}' != '' || '${{ secrets.APP_PRIVATE_KEY_BH_3 }}' != '' ]]; then
+      #       RESULT=$(( ($GITHUB_RUN_NUMBER % 3) ))
+      #       echo $RESULT
+      #       if [[ $RESULT -eq 0 && '${{ vars.APPLICATION_ID_BH_1 }}' != '' ]]; then
+      #         echo "Exportando APPLICATION_ID_BH_1"
+      #         echo "APPLICATION_ID_BH=${{ vars.APPLICATION_ID_BH_1 }}" >> $GITHUB_OUTPUT
+      #         echo "Exportando APP_PRIVATE_KEY_BH_1"
+      #         echo "APP_PRIVATE_KEY_BH<<EOF" >> $GITHUB_OUTPUT
+      #         echo "${{ secrets.APP_PRIVATE_KEY_BH_1 }}" >> $GITHUB_OUTPUT
+      #         echo "EOF" >> $GITHUB_OUTPUT
+      #       elif [[ $RESULT -eq 1 && '${{ vars.APPLICATION_ID_BH_2 }}' != '' ]]; then
+      #         echo "Exportando APPLICATION_ID_BH_2"
+      #         echo "APPLICATION_ID_BH=${{ vars.APPLICATION_ID_BH_2 }}" >> $GITHUB_OUTPUT
+      #         echo "Exportando APP_PRIVATE_KEY_BH_2"
+      #         echo "APP_PRIVATE_KEY_BH<<EOF" >> $GITHUB_OUTPUT
+      #         echo "${{ secrets.APP_PRIVATE_KEY_BH_2 }}" >> $GITHUB_OUTPUT
+      #         echo "EOF" >> $GITHUB_OUTPUT
+      #       elif [[ $RESULT -eq 2 && '${{ vars.APPLICATION_ID_BH_3 }}' != '' ]]; then
+      #         echo "Exportando APPLICATION_ID_BH_3"
+      #         echo "APPLICATION_ID_BH=${{ vars.APPLICATION_ID_BH_3 }}" >> $GITHUB_OUTPUT
+      #         echo "Exportando APP_PRIVATE_KEY_BH_3"
+      #         echo "APP_PRIVATE_KEY_BH<<EOF" >> $GITHUB_OUTPUT
+      #         echo "${{ secrets.APP_PRIVATE_KEY_BH_3 }}" >> $GITHUB_OUTPUT
+      #         echo "EOF" >> $GITHUB_OUTPUT
+      #       else
+      #         echo "Erro ao realizar a rotacao do token"
+      #         exit 1
+      #       fi
+      #       echo "token=BH" >> $GITHUB_OUTPUT
+      #     else
+      #       echo "APPLICATION_ID_BH=${{ secrets.APPLICATION_ID }}" >> $GITHUB_OUTPUT
+      #       echo "APP_PRIVATE_KEY_BH=${{ secrets.APP_PRIVATE_KEY }}" >> $GITHUB_OUTPUT
+      #       echo "token=BH" >> $GITHUB_OUTPUT
+      #     fi
 
-      - name: Evaluate secrets
-        id: evaluate_secrets
-        run: |
-          if [[ '${{ inputs.enable-github-app }}' != 'true' ]] && [[ '${{ steps.check-open-prs.outputs.use-app }}' != 'true' ]]; then
-            echo "token=null" >> $GITHUB_OUTPUT
-          elif [[ '${{ secrets.APP_PRIVATE_KEY_BH_1 }}' != '' || '${{ secrets.APP_PRIVATE_KEY_BH_2 }}' != '' || '${{ secrets.APP_PRIVATE_KEY_BH_3 }}' != '' ]]; then
-            RESULT=$(( ($GITHUB_RUN_NUMBER % 3) ))
-            echo $RESULT
-            if [[ $RESULT -eq 0 && '${{ vars.APPLICATION_ID_BH_1 }}' != '' ]]; then
-              echo "Exportando APPLICATION_ID_BH_1"
-              echo "APPLICATION_ID_BH=${{ vars.APPLICATION_ID_BH_1 }}" >> $GITHUB_OUTPUT
-              echo "Exportando APP_PRIVATE_KEY_BH_1"
-              echo "APP_PRIVATE_KEY_BH<<EOF" >> $GITHUB_OUTPUT
-              echo "${{ secrets.APP_PRIVATE_KEY_BH_1 }}" >> $GITHUB_OUTPUT
-              echo "EOF" >> $GITHUB_OUTPUT
-            elif [[ $RESULT -eq 1 && '${{ vars.APPLICATION_ID_BH_2 }}' != '' ]]; then
-              echo "Exportando APPLICATION_ID_BH_2"
-              echo "APPLICATION_ID_BH=${{ vars.APPLICATION_ID_BH_2 }}" >> $GITHUB_OUTPUT
-              echo "Exportando APP_PRIVATE_KEY_BH_2"
-              echo "APP_PRIVATE_KEY_BH<<EOF" >> $GITHUB_OUTPUT
-              echo "${{ secrets.APP_PRIVATE_KEY_BH_2 }}" >> $GITHUB_OUTPUT
-              echo "EOF" >> $GITHUB_OUTPUT
-            elif [[ $RESULT -eq 2 && '${{ vars.APPLICATION_ID_BH_3 }}' != '' ]]; then
-              echo "Exportando APPLICATION_ID_BH_3"
-              echo "APPLICATION_ID_BH=${{ vars.APPLICATION_ID_BH_3 }}" >> $GITHUB_OUTPUT
-              echo "Exportando APP_PRIVATE_KEY_BH_3"
-              echo "APP_PRIVATE_KEY_BH<<EOF" >> $GITHUB_OUTPUT
-              echo "${{ secrets.APP_PRIVATE_KEY_BH_3 }}" >> $GITHUB_OUTPUT
-              echo "EOF" >> $GITHUB_OUTPUT
-            else
-              echo "Erro ao realizar a rotacao do token"
-              exit 1
-            fi
-            echo "token=BH" >> $GITHUB_OUTPUT
-          else
-            echo "APPLICATION_ID_BH=${{ secrets.APPLICATION_ID }}" >> $GITHUB_OUTPUT
-            echo "APP_PRIVATE_KEY_BH=${{ secrets.APP_PRIVATE_KEY }}" >> $GITHUB_OUTPUT
-            echo "token=BH" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Get Token
-        id: get_workflow_token
-        if: steps.evaluate_secrets.outputs.token == 'BH'
-        uses: peter-murray/workflow-application-token-action@v2
-        with:
-          application_id: ${{ steps.evaluate_secrets.outputs.APPLICATION_ID_BH }}
-          application_private_key: ${{ steps.evaluate_secrets.outputs.APP_PRIVATE_KEY_BH }}
+      # - name: Get Token
+      #   id: get_workflow_token
+      #   if: steps.evaluate_secrets.outputs.token == 'BH'
+      #   uses: peter-murray/workflow-application-token-action@v2
+      #   with:
+      #     application_id: ${{ steps.evaluate_secrets.outputs.APPLICATION_ID_BH }}
+      #     application_private_key: ${{ steps.evaluate_secrets.outputs.APP_PRIVATE_KEY_BH }}
 
       - name: auto pull-request
         id: auto-pull-request
         uses: actions/github-script@v6
         with:
-          github-token: ${{ steps.get_workflow_token.outputs.token || github.token }}
+          # github-token: ${{ steps.get_workflow_token.outputs.token || github.token }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const listLabel = [
               {
