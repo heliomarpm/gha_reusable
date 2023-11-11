@@ -218,96 +218,52 @@ jobs:
             if (inputs["custom-body"].length > 0) {
               core.info('Adding custom-body')
               prMessage = inputs["custom-body"]
-            } else
-            if ('${{ inputs.target-branch }}' == 'main' && !isDep) {
-              core.info('Open PR com mensagem de GMUD.')
-              let numeroRetorno = ''
-              let tagRollback = 'Not found'
-              try {
-                core.debug('Response responseRelease:')
-                let responseRelease = await github.rest.repos.listReleases({
-                                        owner: context.repo.owner,
-                                        repo: context.repo.repo,
-                                        per_page: 100,
-                                      });
-                core.debug(responseRelease)
-                core.debug('Response responseRelease:')
-                let responseTag = await github.rest.repos.listTags({
-                                        owner: context.repo.owner,
-                                        repo: context.repo.repo,
-                                        per_page: 100,
-                                      });
-                core.debug(responseTag)
-                responseRelease = responseRelease.data.filter((x) => x.draft == false && x.prerelease == false)[0]
-                numeroRetorno = responseTag.data.filter((x) => x.name == responseRelease.tag_name)[0].commit.sha
-                tagRollback = responseRelease.tag_name
-              } catch (error) {
-                core.warning('Versao de Rollback não encontrada')
-                numeroRetorno = 'Not found'
-              }
+            } else {
+              if ('${{ inputs.target-branch }}' == 'main' && !isDep) {
+                core.info('Open PR com mensagem de GMUD.')
+                let numeroRetorno = ''
+                let tagRollback = 'Not found'
+                try {
+                  core.debug('Response responseRelease:')
+                  let responseRelease = await github.rest.repos.listReleases({
+                                          owner: context.repo.owner,
+                                          repo: context.repo.repo,
+                                          per_page: 100,
+                                        });
+                  core.debug(responseRelease)
+                  core.debug('Response responseRelease:')
+                  let responseTag = await github.rest.repos.listTags({
+                                          owner: context.repo.owner,
+                                          repo: context.repo.repo,
+                                          per_page: 100,
+                                        });
+                  core.debug(responseTag)
+                  responseRelease = responseRelease.data.filter((x) => x.draft == false && x.prerelease == false)[0]
+                  numeroRetorno = responseTag.data.filter((x) => x.name == responseRelease.tag_name)[0].commit.sha
+                  tagRollback = responseRelease.tag_name
+                } catch (error) {
+                  core.warning('Versao de Rollback não encontrada')
+                  numeroRetorno = 'Not found'
+                }
 
-              let idTaac = ''
-              if ('${{ inputs.id-taac }}' == '') {
-                idTaac = 'Not found'
-              } else {
-                idTaac = JSON.parse(JSON.stringify(${{ inputs.id-taac }})).id_taac
-              }
-
-              if ( idTaac == '' ) {
                 core.info('Mensagem com GMUD manual')
                 prMessage = `GMUD: CHGXXXXXXX <breakLine>
-                             Hora implantação: HH:MM <breakLine>
-                             Data implantação: DD/MM/YYYY <breakLine>
-                             Pacote de implantação: '${{ github.sha }}' <breakLine>
-                             Pacote de retorno: '${numeroRetorno}' <breakLine>
-                             Versão rollback: ${tagRollback} <breakLine>
-                             <breakLine>
-                             **_INSTRUÇÕES_**: <breakLine>
-                             1. Se existe o fluxo de bypass de GMUD para sua sigla, faça a edição do PR para iniciar o fluxo de produção. Não é necessário preencher as informações da mudança.<breakLine>
-                             2. Troque o valor CHGXXXXXXX pelo número da sua GMUD ou INC. <breakLine>
-                             3. Preencha os campos Hora implantação e Data implantação para agendar a entrega. Lembrando que a GMUD deve estar no status de Implementar na data/hora informada. <breakLine>
-                             4. Copie o número do pacote de implatacao e retorno na sua GMUD, pois esse valor será validado pela esteira. <breakLine>
-                             5. **Caso deseja cancelar seu agendamento, substitua o valor da GMUD por "Cancelado".** <breakLine>
-                             <breakLine>
-                             **_IMPORTANTE_**: <breakLine>
-                             - O número do pacote de retorno está atrelado diretamente a versão de rollback. <breakLine>`
-              } else  {
-                core.info('Mensagem com GMUD automatizada')
-                if (${{ inputs.is-pre-prod }})
-                  prMessage = `Hora implantação: HH:MM <breakLine>
-                             Data implantação: DD/MM/YYYY <breakLine>`
-
-                prMessage += `Pacote de implantação: '${{ github.sha }}' <breakLine>
-                             Pacote de retorno: '${numeroRetorno}' <breakLine>
-                             Versão rollback: ${tagRollback} <breakLine>
-                             ID TAAC: {'${idTaac}'} <breakLine>
-                             Histórias: [XPTO-1,XPTO-2] <breakLine>
-                             <breakLine>`
-
-                if (${{ inputs.is-pre-prod }})
-                  prMessage += `**_INSTRUÇÕES_**: <breakLine>
-                             1. Este fluxo é seguido para entregas em ambientes utilizando cloud publica, com entrega em ambiente de **_PILOTO_** e **_PRODUÇÃO_**.<breakLine>
-                             2. Preencha o campo Histórias dentro dos colchetes com uma separação de vírgulas para que o momento da abertura da GMUD faça o link com as mesmas. <breakLine>
-                             3. Copie o número do pacote de implatacao e retorno na sua GMUD, pois esse valor será validado pela esteira. <breakLine>
-                             4. O agendamento de PILOTO será o valor informado no campo **Data de início planejada** na sua GMUD. <breakLine>
-                             5. O agendamento de PRODUÇÃO será o valor informado nos campos **Hora implantação** e **Data implantação** no corpo do Pull Request. <breakLine>
-                             6. Após implantação com sucesso em **PILOTO**, o número da GMUD será inserido no corpo deste Pull Request. <breakLine>
-                             7. **Caso deseja reagendar sua entrega em **PRODUÇÃO**, altere os campos **Hora implantação** e **Data implantação** no corpo do Pull Request. <breakLine>
-                             8. **Caso deseja cancelar seu agendamento em **PRODUÇÃO**, substitua o valor da GMUD por "Cancelado".** <breakLine>
-
-                             <breakLine>
-                             **_IMPORTANTE_**: <breakLine>
-                             - O número do pacote de retorno está atrelado diretamente a versão de rollback. <breakLine>`
-
-                else
-                  prMessage += `**_INSTRUÇÕES_**: <breakLine>
-                             1. Este fluxo é seguido para entregas em ambientes utilizando cloud publica.<breakLine>
-                             2. Preencha o campo Histórias dentro dos colchetes com uma separação de vírgulas para que o momento da abertura da GMUD faça o link com as mesmas. <breakLine>
-                             3. Copie o número do pacote de implatacao e retorno na sua GMUD, pois esse valor será validado pela esteira. <breakLine>
-
-                             <breakLine>
-                             **_IMPORTANTE_**: <breakLine>
-                             - O número do pacote de retorno está atrelado diretamente a versão de rollback. <breakLine>`
+                            Hora implantação: HH:MM <breakLine>
+                            Data implantação: DD/MM/YYYY <breakLine>
+                            Pacote de implantação: '${{ github.sha }}' <breakLine>
+                            Pacote de retorno: '${numeroRetorno}' <breakLine>
+                            Versão rollback: ${tagRollback} <breakLine>
+                            <breakLine>
+                            **_INSTRUÇÕES_**: <breakLine>
+                            1. Se existe o fluxo de bypass de GMUD para sua sigla, faça a edição do PR para iniciar o fluxo de produção. Não é necessário preencher as informações da mudança.<breakLine>
+                            2. Troque o valor CHGXXXXXXX pelo número da sua GMUD ou INC. <breakLine>
+                            3. Preencha os campos Hora implantação e Data implantação para agendar a entrega. Lembrando que a GMUD deve estar no status de Implementar na data/hora informada. <breakLine>
+                            4. Copie o número do pacote de implatacao e retorno na sua GMUD, pois esse valor será validado pela esteira. <breakLine>
+                            5. **Caso deseja cancelar seu agendamento, substitua o valor da GMUD por "Cancelado".** <breakLine>
+                            <breakLine>
+                            **_IMPORTANTE_**: <breakLine>
+                            - O número do pacote de retorno está atrelado diretamente a versão de rollback. <breakLine>`
+                
               }
             }
 
@@ -330,8 +286,10 @@ jobs:
             }
 
             prMessage = prMessage.replace(/\n/g, '').replace(/\t/g, '').replace(/\ \ /g, '').replace(/<breakLine>/g, "\n")
+
             if (${{ inputs.target-create-branch }} == true) {
               if ("${{ inputs.target-base-branch }}" == "") throw new Error('When target-create-branch is true you should input target-base-branch')
+              
               core.debug('Response of getBranch:')
               let response = await github.rest.repos.getBranch({
                                 owner: context.repo.owner,
@@ -339,6 +297,7 @@ jobs:
                                 branch: "${{ inputs.target-base-branch }}"
                               })
               core.debug(response)
+
               try {
                 core.debug('Response of createRef:')
                 response = await github.rest.git.createRef({
@@ -349,11 +308,13 @@ jobs:
                             })
                 core.info('Branch ${{ inputs.target-branch }} created!')
                 core.debug(JSON.parse(JSON.stringify(response)))
-              } catch (error) {
+              } 
+              catch (error) {
                 core.debug(error.message)
                 core.info('Branch ${{ inputs.target-branch }} already exists!')
               }
             }
+
             try {
               core.debug('Response of pulls.create:')
               response = await github.rest.pulls.create({
@@ -369,11 +330,14 @@ jobs:
               core.setOutput('pr-url', `${response.data.html_url}`);
               core.setOutput('pr-number', `${response.data.number}`);
               core.debug(JSON.parse(JSON.stringify(response)))
-            } catch (error) {
+            } 
+            catch (error) {
               core.debug(error.message)
               let responseError = JSON.parse(error.message.split('Validation Failed: ')[1])
               core.debug(responseError)
+              
               if (responseError.code == "invalid") throw new Error('Error to create pull request. Check if ${{ inputs.target-branch  }} and ${{ env.branch_name }} branchs exist.')
+              
               core.info(responseError.message)
               if (responseError.message.includes('A pull request already exists')) {
                 core.debug('Response list pull request:')
@@ -381,6 +345,7 @@ jobs:
                             owner: context.repo.owner,
                             repo: context.repo.repo
                           });
+
                 core.debug(response)
                 const pullRequestInfo = response.data.filter((x) => x.head.ref == "${{ env.branch_name }}" && x.base.ref == "${{ inputs.target-branch }}")
                 core.debug('Result filter list:')
