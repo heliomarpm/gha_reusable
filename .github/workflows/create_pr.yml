@@ -294,13 +294,18 @@ jobs:
               core.info('Create target-branch')
               if ("${{ inputs.target-base-branch }}" == "") throw new Error('When target-create-branch is true you should input target-base-branch')
 
-              core.debug('Response of getBranch:')
-              let response = await github.rest.repos.getBranch({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                branch: "${{ inputs.target-base-branch }}"
-              });
-              core.debug(response)
+              try {
+                core.debug('Response of getBranch:')
+                let response = await github.rest.repos.getBranch({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  branch: "${{ inputs.target-base-branch }}"
+                });
+                core.debug(response)
+              }
+              catch(err) {
+                core.error(`Error ${err}, action may still succeed though`);
+              }
             }
 
 
