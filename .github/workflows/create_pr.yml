@@ -301,13 +301,80 @@ jobs:
                   repo: context.repo.repo,
                   branch: "${{ inputs.target-base-branch }}"
                 });
-                core.debug(response)
+                core.debug(response);
+              }
+              catch(err) {
+                core.error(`Error ${err}, action may still succeed though`);
+              }
+                
+              try {
+                core.info('Response of createBranch:')
+                core.debug('Response of createRef:')
+                response = await github.rest.git.createRef({
+                              owner: context.repo.owner,
+                              repo: context.repo.repo,
+                              ref: "refs/heads/${{ inputs.target-branch }}",
+                              sha: response.data.commit.sha
+                            })
+                core.info('Branch ${{ inputs.target-branch }} created!');
+                core.debug(JSON.parse(JSON.stringify(response)));
               }
               catch(err) {
                 core.error(`Error ${err}, action may still succeed though`);
               }
             }
 
+            try {
+              core.info('Response of pulls.create:')
+              core.info(`head: ${{ env.branch_name }}`);
+              core.info(`base: ${{ inputs.target-branch }}`);
+              core.info(`title: ${{ inputs.custom-title }} ${{ inputs.target-branch  }} <- ${{ env.branch_name }}`);
+
+              core.debug('Response of pulls.create:')
+              response = await github.rest.pulls.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                head: "${{ env.branch_name }}",
+                base: "${{ inputs.target-branch }}",
+                title: "${{ inputs.custom-title }} ${{ inputs.target-branch  }} <- ${{ env.branch_name }}",
+                body: prMessage
+              });
+              
+              core.info('Pull request created!')
+              core.info(`Link: ${response.data.html_url}`)
+              core.setOutput('pr-url', `${response.data.html_url}`);
+              core.setOutput('pr-number', `${response.data.number}`);
+              core.debug(JSON.parse(JSON.stringify(response)))
+            } 
+            catch (error) {
+              core.error(error.message)
+              let responseError = JSON.parse(error.message.split('Validation Failed: ')[1])
+              core.debug(responseError)
+              
+              if (responseError.code == "invalid") throw new Error('Error to create pull request. Check if ${{ inputs.target-branch  }} and ${{ env.branch_name }} branchs exist.')
+              
+              core.info(responseError.message)
+              if (responseError.message.includes('A pull request already exists')) {
+                core.debug('Response list pull request:')
+                response = await github.rest.pulls.list({
+                            owner: context.repo.owner,
+                            repo: context.repo.repo
+                          });
+
+                core.debug(response)
+                const pullRequestInfo = response.data.filter((x) => x.head.ref == "${{ env.branch_name }}" && x.base.ref == "${{ inputs.target-branch }}")
+                core.debug('Result filter list:')
+                core.debug(pullRequestInfo)
+                core.debug('Response update pull request:')
+                response = await github.rest.pulls.update({
+                            owner: context.repo.owner,
+                            repo: context.repo.repo,
+                            pull_number: pullRequestInfo[0].number,
+                            body: prMessage
+                          });
+                core.debug(response)
+              }
+            }
 
             core.info('>>>> Terminado! <<<<')
             core.info(prMessage)
