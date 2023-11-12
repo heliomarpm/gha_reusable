@@ -264,16 +264,10 @@ jobs:
             }
 
             core.info('loop in listLabel:')
-            core.info(listLabel);
-            core.info(context.repo.owner);
-            core.info(context.repo.repo);
 
             for (const label of listLabel) {
-              core.info('name: ' + label.name);
-              core.info('color: ' + label.color);
-              core.info('description: ' + label.description);
+              core.info(style.color.ansi16m.hex(`#${label.color}`) + `label: ${label.name} - ${label.description});
             }
 
             core.info('Terminado!')
-            core.debug('prMessage: ' + prMessage)
 
