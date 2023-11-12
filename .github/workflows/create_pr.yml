@@ -177,8 +177,8 @@ jobs:
         # if: steps.evaluate_secrets.outputs.token == 'BH'
         uses: peter-murray/workflow-application-token-action@v2
         with:
-          application_id: ${{ secrets.APPLICATION_ID }}
-          application_private_key: ${{ secrets.APP_PRIVATE_KEY }}
+          application_id: 2023
+          application_private_key: ${{ secrets.GITHUB_TOKEN }}
 
       - name: auto pull-request
         id: auto-pull-request
