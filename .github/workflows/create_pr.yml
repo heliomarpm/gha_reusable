@@ -211,8 +211,6 @@ jobs:
             let isDep = context.repo.repo.split('-')[2] == 'dep'
 
             const inputs = ${{ toJSON(inputs) }}
-            core.info('Adding custom-body')
-            core.info(inputs["custom-body"])
 
             if (inputs["custom-body"].length > 0) {
               core.info('Adding custom-body')
@@ -265,6 +263,8 @@ jobs:
                 
               }
             }
+
+            core.info('loop in listLabel:')
 
             for (const label of listLabel) {
               try {
