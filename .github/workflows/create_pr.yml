@@ -260,15 +260,18 @@ jobs:
                             <breakLine>
                             **_IMPORTANTE_**: <breakLine>
                             - O número do pacote de retorno está atrelado diretamente a versão de rollback. <breakLine>`
-                
               }
             }
 
             core.info('loop in listLabel:')
+            core.info(listLabel);
+            core.info(context.repo.owner);
+            core.info(context.repo.repo);
 
             for (const label of listLabel) {
               try {
                 core.debug('Response createLabel:');
+
                 await new Promise(resolve => setTimeout(resolve, 1000));
                 const response = await github.rest.issues.createLabel({
                   owner: context.repo.owner,
