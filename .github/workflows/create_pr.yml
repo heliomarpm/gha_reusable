@@ -266,7 +266,7 @@ jobs:
             core.info('loop in listLabel:')
 
             for (const label of listLabel) {
-              core.info(style.color.ansi16m.hex(`#${label.color}`) + `label: ${label.name} - ${label.description});
+              core.info(`label: ${label.name} - ${label.description}`);
             }
 
             core.info('Terminado!')
