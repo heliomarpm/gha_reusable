@@ -270,6 +270,15 @@ jobs:
               core.info(`label: ${label.name} - ${label.description}`);
               
               await new Promise(resolve => setTimeout(resolve, 1000));
+              const response = await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: label.name,
+                  color: label.color,
+                  description: label.description
+                });
+                
+                core.info('Label created!');
             }
 
             core.info('Terminado!')
