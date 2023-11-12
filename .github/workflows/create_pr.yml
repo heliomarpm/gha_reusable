@@ -267,18 +267,23 @@ jobs:
 
             for (const label of listLabel) {
               core.debug('Response createLabel:');
-              core.info(`label: ${label.name} - ${label.description}`);
-              
-              await new Promise(resolve => setTimeout(resolve, 1000));
-              const response = await github.rest.issues.createLabel({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  name: label.name,
-                  color: label.color,
-                  description: label.description
-                });
-                
-                core.info('Label created!');
+              core.info(`Create label: ${label.name} - ${label.description}`);
+              try {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                const response = await github.rest.issues.createLabel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    name: label.name,
+                    color: label.color,
+                    description: label.description
+                  });
+                  
+                  core.info('Label created!');
+              }
+              catch(err) {
+                core.info('Label already exists!')
+                core.error(`Error ${err}, action may still succeed though`);
+              }
             }
 
             core.info('Terminado!')
