@@ -174,7 +174,7 @@ jobs:
 
       - name: Get Token
         id: get_workflow_token
-        if: steps.evaluate_secrets.outputs.token == 'BH'
+        # if: steps.evaluate_secrets.outputs.token == 'BH'
         uses: peter-murray/workflow-application-token-action@v2
         with:
           application_id: ${{ steps.evaluate_secrets.outputs.APPLICATION_ID }}
