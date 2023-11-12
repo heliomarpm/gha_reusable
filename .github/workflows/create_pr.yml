@@ -172,20 +172,20 @@ jobs:
       #       echo "token=BH" >> $GITHUB_OUTPUT
       #     fi
 
-      # - name: Get Token
-      #   id: get_workflow_token
-      #   if: steps.evaluate_secrets.outputs.token == 'BH'
-      #   uses: peter-murray/workflow-application-token-action@v2
-      #   with:
-      #     application_id: ${{ steps.evaluate_secrets.outputs.APPLICATION_ID_BH }}
-      #     application_private_key: ${{ steps.evaluate_secrets.outputs.APP_PRIVATE_KEY_BH }}
+      - name: Get Token
+        id: get_workflow_token
+        if: steps.evaluate_secrets.outputs.token == 'BH'
+        uses: peter-murray/workflow-application-token-action@v2
+        with:
+          application_id: ${{ steps.evaluate_secrets.outputs.APPLICATION_ID }}
+          application_private_key: ${{ steps.evaluate_secrets.outputs.APP_PRIVATE_KEY }}
 
       - name: auto pull-request
         id: auto-pull-request
         uses: actions/github-script@v6
         with:
-          # github-token: ${{ steps.get_workflow_token.outputs.token || github.token }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ steps.get_workflow_token.outputs.token || github.token }}
+          # github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const listLabel = [
               {
