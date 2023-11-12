@@ -6,45 +6,45 @@ on:
       runs-on:
         required: false
         type: string
-        default: 'ubuntu-latest'
+        default: "ubuntu-latest"
 
       target-branch:
-        description: 'Branch de destino do PR.'
+        description: "Branch de destino do PR."
         required: true
         type: string
       origin-branch:
-        description: 'Branch origem do PR. Caso campo esteja vazio sera utilizada a branch atual do workflow.'
+        description: "Branch origem do PR. Caso campo esteja vazio sera utilizada a branch atual do workflow."
         required: false
         type: string
       target-create-branch:
-        description: 'Caso target-branch não exista sera criada.'
+        description: "Caso target-branch não exista sera criada."
         required: false
         type: boolean
         default: false
       target-base-branch:
-        description: 'Branch base para criacao de target-branch. target-create-branch deve ser true'
+        description: "Branch base para criacao de target-branch. target-create-branch deve ser true"
         required: false
         type: string
       custom-title:
         required: false
-        default: 'PR criado automaticamente.'
+        default: "PR criado automaticamente."
         type: string
       id-taac:
         required: false
         type: string
-        default: ''
+        default: ""
       ambiente:
         required: false
         type: string
-        default: 'distribuida'
+        default: "distribuida"
       custom-body:
         required: false
         type: string
 
       prefix-refs-tag:
-        description: 'Para Pull requests abertos '
+        description: "Para Pull requests abertos "
         required: false
-        default: 'release/'
+        default: "release/"
         type: string
       environment:
         required: false
@@ -266,8 +266,10 @@ jobs:
             core.info('loop in listLabel:')
 
             for (const label of listLabel) {
+              core.debug('Response createLabel:');
               core.info(`label: ${label.name} - ${label.description}`);
+              
+              await new Promise(resolve => setTimeout(resolve, 1000));
             }
 
             core.info('Terminado!')
-
