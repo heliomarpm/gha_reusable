@@ -269,24 +269,40 @@ jobs:
               core.info(`Create label: ${label.name} - ${label.description}`);
 
               try {
+                core.debug('Response createLabel:');
+
                 await new Promise(resolve => setTimeout(resolve, 1000));
-                await github.rest.issues.createLabel({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    name: label.name,
-                    color: label.color,
-                    description: label.description
-                  });
-                  
-                  core.info('Label created!');
+                let response = await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: label.name,
+                  color: label.color,
+                  description: label.description
+                });
+                core.debug(response);
+                core.info('Label created!');
               }
               catch(err) {
-                core.error('Label already exists!')
+                core.error(`Label [${label.name}] already exists!`)
                 core.error(`Error ${err}, action may still succeed though`);
               }
             }
 
             prMessage = prMessage.replace(/\n/g, '').replace(/\t/g, '').replace(/\ \ /g, '').replace(/<breakLine>/g, "\n")
               
+            if (${{ inputs.target-create-branch }} == true) {
+              core.info('Create target-branch')
+              if ("${{ inputs.target-base-branch }}" == "") throw new Error('When target-create-branch is true you should input target-base-branch')
+
+              core.debug('Response of getBranch:')
+              let response = await github.rest.repos.getBranch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                branch: "${{ inputs.target-base-branch }}"
+              });
+              core.debug(response)
+            }
+
+
             core.info('>>>> Terminado! <<<<')
             core.info(prMessage)
