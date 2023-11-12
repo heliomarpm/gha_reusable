@@ -86,6 +86,7 @@ on:
 
 jobs:
   pull-request:
+    permissions: write-all
     environment: ${{ inputs.environment }}
     name: Create
     runs-on: ${{ inputs.runs-on }}
