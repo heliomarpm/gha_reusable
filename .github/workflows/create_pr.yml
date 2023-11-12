@@ -269,97 +269,11 @@ jobs:
             core.info(context.repo.repo);
 
             for (const label of listLabel) {
-              try {
-                core.debug('Response createLabel:');
-
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                const response = await github.rest.issues.createLabel({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  name: label.name,
-                  color: label.color,
-                  description: label.description
-                });
-                core.debug(response);
-                core.debug('Label created!');
-              } catch (error) {
-                core.debug(error.message);
-              }
+              core.info('name: ' + label.name);
+              core.info('color: ' + label.color);
+              core.info('description: ' + label.description);
             }
 
-            prMessage = prMessage.replace(/\n/g, '').replace(/\t/g, '').replace(/\ \ /g, '').replace(/<breakLine>/g, "\n")
-
-            if (${{ inputs.target-create-branch }} == true) {
-              if ("${{ inputs.target-base-branch }}" == "") throw new Error('When target-create-branch is true you should input target-base-branch')
-              
-              core.debug('Response of getBranch:')
-              let response = await github.rest.repos.getBranch({
-                                owner: context.repo.owner,
-                                repo: context.repo.repo,
-                                branch: "${{ inputs.target-base-branch }}"
-                              })
-              core.debug(response)
-
-              try {
-                core.debug('Response of createRef:')
-                response = await github.rest.git.createRef({
-                              owner: context.repo.owner,
-                              repo: context.repo.repo,
-                              ref: "refs/heads/${{ inputs.target-branch }}",
-                              sha: response.data.commit.sha
-                            })
-                core.info('Branch ${{ inputs.target-branch }} created!')
-                core.debug(JSON.parse(JSON.stringify(response)))
-              } 
-              catch (error) {
-                core.debug(error.message)
-                core.info('Branch ${{ inputs.target-branch }} already exists!')
-              }
-            }
-
-            try {
-              core.debug('Response of pulls.create:')
-              response = await github.rest.pulls.create({
-                            owner: context.repo.owner,
-                            repo: context.repo.repo,
-                            head: "${{ env.branch_name }}",
-                            base: "${{ inputs.target-branch }}",
-                            title: "${{ inputs.custom-title }} ${{ inputs.target-branch  }} <- ${{ env.branch_name }}",
-                            body: prMessage
-                          });
-              core.info('Pull request created!')
-              core.info(`Link: ${response.data.html_url}`)
-              core.setOutput('pr-url', `${response.data.html_url}`);
-              core.setOutput('pr-number', `${response.data.number}`);
-              core.debug(JSON.parse(JSON.stringify(response)))
-            } 
-            catch (error) {
-              core.debug(error.message)
-              let responseError = JSON.parse(error.message.split('Validation Failed: ')[1])
-              core.debug(responseError)
-              
-              if (responseError.code == "invalid") throw new Error('Error to create pull request. Check if ${{ inputs.target-branch  }} and ${{ env.branch_name }} branchs exist.')
-              
-              core.info(responseError.message)
-              if (responseError.message.includes('A pull request already exists')) {
-                core.debug('Response list pull request:')
-                response = await github.rest.pulls.list({
-                            owner: context.repo.owner,
-                            repo: context.repo.repo
-                          });
-
-                core.debug(response)
-                const pullRequestInfo = response.data.filter((x) => x.head.ref == "${{ env.branch_name }}" && x.base.ref == "${{ inputs.target-branch }}")
-                core.debug('Result filter list:')
-                core.debug(pullRequestInfo)
-                core.debug('Response update pull request:')
-                response = await github.rest.pulls.update({
-                            owner: context.repo.owner,
-                            repo: context.repo.repo,
-                            pull_number: pullRequestInfo[0].number,
-                            body: prMessage
-                          });
-                core.debug(response)
-              }
-            }
+            core.info('Terminado!')
+            core.debug('prMessage: ' + prMessage)
 
