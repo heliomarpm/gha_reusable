@@ -348,6 +348,7 @@ jobs:
             } 
             catch(err) {
               core.error(`Error ${err}, action may still succeed though`);
+              core.error(err.message);
             }
 
             core.info('>>>> Terminado! <<<<')
