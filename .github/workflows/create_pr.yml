@@ -89,8 +89,8 @@ jobs:
     environment: ${{ inputs.environment }}
     name: Create
     runs-on: ${{ inputs.runs-on }}
-    permissions:
-      contents: write
+    # permissions:
+    #   contents: write
     outputs:
       pr-number: ${{ steps.auto-pull-request.outputs.pr-number }}
       pr-url: ${{ steps.auto-pull-request.outputs.pr-url }}
